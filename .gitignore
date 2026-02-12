@@ -1,0 +1,30 @@
+# Virtual environment
+venv/
+venv2/
+venv3/
+.env/
+
+# Models & embeddings
+models/
+books.index
+book_embeddings.npy
+book_metadata.npy
+books_meta.npy
+books.db
+
+# Data
+data/books/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Huggingface cache
+.cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
