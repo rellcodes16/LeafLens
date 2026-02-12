@@ -81,7 +81,7 @@ for title_key, offsets in collapsed_votes.items():
 
 results.sort(key=lambda x: (x[1], x[2], x[3]), reverse=True)
 
-# ---------------- OUTPUT ----------------
+#  OUTPUT 
 if not results:
     print("\n No match found.")
     conn.close()
@@ -102,7 +102,7 @@ if aligned >= MIN_ALIGNED and dominance >= MIN_DOMINANCE:
 
     title, author = row if row else (title_key, "Unknown")
 
-    print("\n📘 MATCH FOUND")
+    print("\n MATCH FOUND")
     print(f"Title: {title}")
     print(f"Author: {author}")
     print(f"Aligned matches: {aligned}")

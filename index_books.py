@@ -3,13 +3,13 @@ import sqlite3
 import hashlib
 import re
 
-# ---------------- CONFIG ----------------
+
 BOOKS_DIR = "data/books"
 DB_PATH = "books.db"
 
-WINDOW_SIZES = [6, 7, 8]   # multi-scale = OCR tolerant
+WINDOW_SIZES = [6, 7, 8]   
 STEP = 1
-# --------------------------------------
+
 
 
 def normalize_text(text):
@@ -55,14 +55,13 @@ ON fingerprints(hash)
 
 conn.commit()
 
-# ---------------- INDEX BOOKS ----------------
+
 files = [f for f in os.listdir(BOOKS_DIR) if f.endswith(".txt")]
 
 for filename in files:
     book_id = filename.replace(".txt", "")
     path = os.path.join(BOOKS_DIR, filename)
 
-    # Skip if already indexed
     exists = c.execute(
         "SELECT 1 FROM fingerprints WHERE book_id=? LIMIT 1",
         (book_id,)

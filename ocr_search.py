@@ -21,7 +21,7 @@ MIN_VOTE_ACCEPT = 3
 MPNET_DIR = "./models/mpnet"
 MINILM_DIR = "./models/minilm"
 
-# ================= ANTHOLOGY DETECTION =================
+# ANTHOLOGY DETECTION 
 ANTHOLOGY_KEYWORDS = [
     "complete works",
     "collected works",
@@ -34,7 +34,7 @@ def is_anthology(title):
     title = title.lower()
     return any(word in title for word in ANTHOLOGY_KEYWORDS)
 
-# ================= MODEL LOADER =================
+# MODEL LOADER 
 def load_model_local(model_name, save_path):
     if not os.path.exists(save_path):
         print(f" {model_name} not found locally. Downloading...")
@@ -51,7 +51,7 @@ reader = easyocr.Reader(["en"], gpu=False)
 miniLM = load_model_local("all-MiniLM-L6-v2", MINILM_DIR)
 mpnet = load_model_local("sentence-transformers/all-mpnet-base-v2", MPNET_DIR)
 
-# ================= BUILD FAISS INDEX =================
+# BUILD FAISS INDEX 
 def build_index():
     if not os.path.exists(BOOKS_DIR):
         print(f"Books folder not found: {BOOKS_DIR}")
@@ -104,33 +104,33 @@ def build_index():
 if not os.path.exists(INDEX_PATH) or not os.path.exists(META_PATH):
     build_index()
 
-# ================= LOAD INDEX =================
+# LOAD INDEX 
 print("Loading FAISS index...")
 index = faiss.read_index(INDEX_PATH)
 metadata = np.load(META_PATH, allow_pickle=True)
 print(f"Loaded {len(metadata)} chunks")
 
-# ================= OCR =================
+# OCR 
 def extract_text(image_path):
     print(f"\n OCR reading: {image_path}")
     result = reader.readtext(image_path, detail=0)
     print(f"OCR extracted {len(result)} text lines")
     return " ".join(result)
 
-# ================= TEXT CLEANING =================
+# TEXT CLEANING 
 def clean_text(text):
     text = text.lower()
     text = re.sub(r"[^a-z0-9\s]", " ", text)
     text = re.sub(r"\s+", " ", text)
     return text.strip()
 
-# ================= OCR CHUNKING =================
+# OCR CHUNKING 
 def chunk_text(text, size=OCR_CHUNK_SIZE):
     chunks = [text[i:i+size] for i in range(0, len(text), size)]
     print(f"Split OCR text into {len(chunks)} chunks")
     return chunks
 
-# ================= FAST SEARCH =================
+# FAST SEARCH 
 def fast_search(chunks):
     print("\n Running MiniLM fast search...")
     candidates = []
@@ -146,7 +146,7 @@ def fast_search(chunks):
 
     return candidates
 
-# ================= RERANK =================
+# RERANK 
 def rerank_candidates(chunks, candidate_books):
     if not candidate_books:
         return None, 0
@@ -173,7 +173,6 @@ def rerank_candidates(chunks, candidate_books):
 
         score = sim.mean()
 
-        # Penalize anthologies
         if is_anthology(book):
             score *= 0.80  
 
@@ -185,7 +184,6 @@ def rerank_candidates(chunks, candidate_books):
 
     return best_book, best_score
 
-# ================= FINAL DECISION =================
 def identify_book(image_path):
     raw = extract_text(image_path)
     clean = clean_text(raw)
@@ -216,28 +214,24 @@ def identify_book(image_path):
 
     FINAL_BOOK = best_book
 
-    # ================= CORE RULE =================
-
-    # 1️⃣ Prefer specific over anthology ALWAYS
+    # BLOCK ANTHOLOGY IF SPECIFIC BOOK EXISTS
     if is_anthology(FINAL_BOOK) and not is_anthology(top_vote_book):
         print(" Switching from anthology to specific book")
         FINAL_BOOK = top_vote_book
 
-    # 2️⃣ Block anthology from overriding a specific rerank match
     if not is_anthology(best_book) and is_anthology(top_vote_book):
         print(" Blocking anthology override — keeping specific rerank result")
         FINAL_BOOK = best_book
 
-    # 3️⃣ Allow vote override only when both are same type
     elif top_vote_count >= MIN_VOTE_ACCEPT and top_vote_book != FINAL_BOOK:
         print(" Overriding rerank with vote consensus")
         FINAL_BOOK = top_vote_book
 
-    # Boost score if OCR contains book title
+
     if FINAL_BOOK and FINAL_BOOK.lower().replace(".txt", "") in clean:
         best_score += 0.10
 
-    # Accept if rerank OR votes confident
+
     if best_score >= CONFIDENCE_THRESHOLD or top_vote_count >= MIN_VOTE_ACCEPT:
         return {
             "status": "success",
@@ -248,7 +242,7 @@ def identify_book(image_path):
 
     return {"status": "fail", "reason": "Low confidence"}
 
-# ================= RUN =================
+
 if __name__ == "__main__":
     image_path = input("\n Enter image path: ")
     result = identify_book(image_path)
