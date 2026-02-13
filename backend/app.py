@@ -1,10 +1,23 @@
 from fastapi import FastAPI, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from api.text_search import run_text_search
 from api.image_search import run_image_search
 import tempfile
 
 app = FastAPI()
+
+origins = [
+    "http://localhost:5173", 
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class TextSearchRequest(BaseModel):
     text: str
@@ -15,7 +28,6 @@ async def text_search_endpoint(payload: TextSearchRequest):
     return run_text_search(query)
 
 
-
 @app.post("/image-search")
 async def image_search_endpoint(file: UploadFile = File(...)):
     with tempfile.NamedTemporaryFile(delete=False) as tmp:
@@ -23,4 +35,3 @@ async def image_search_endpoint(file: UploadFile = File(...)):
         image_path = tmp.name
 
     return run_image_search(image_path)
-
