@@ -11,7 +11,6 @@ function ResultCard({ result, userInput, loading }) {
 
     clearTimeout(timeoutRef.current);
 
-    // Prepend "Book Name: " to the title
     const fullText = `Book Name: ${result.title}`;
     setDisplayText("");
 
@@ -30,7 +29,6 @@ function ResultCard({ result, userInput, loading }) {
     return () => clearTimeout(timeoutRef.current);
   }, [result?.title]);
 
-  // Pulsing dot while loading
   useEffect(() => {
     if (loading) {
       const interval = setInterval(() => setDotVisible((v) => !v), 500);
