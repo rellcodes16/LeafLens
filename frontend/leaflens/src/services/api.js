@@ -14,5 +14,6 @@ export const searchByImage = async (file) => {
   formData.append("file", file);
 
   const res = await API.post("/image-search", formData);
+  console.log(res.data)
   return res.data;
 };

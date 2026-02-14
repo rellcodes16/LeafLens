@@ -5,17 +5,25 @@ import ResultCard from "./components/ResultCard";
 import { searchByText, searchByImage } from "./services/api";
 
 function App() {
-  const [result, setResult] = useState(null);
-  const [userInput, setUserInput] = useState(null);
+  const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
 
 const handleSearch = async ({ text, file }) => {
+  setHasSearched(true);
+
+  const newEntry = {
+    id: Date.now(),
+    userInput: { text, file },
+    result: null,      // result not ready yet
+    loading: true,     // mark this entry as loading
+  };
+
+  // 1️⃣ Immediately add user message
+  setHistory((prev) => [...prev, newEntry]);
+
   try {
     setLoading(true);
-    setHasSearched(true);
-
-    setUserInput({ text, file });
 
     let response;
     if (file) {
@@ -24,7 +32,15 @@ const handleSearch = async ({ text, file }) => {
       response = await searchByText(text);
     }
 
-    setResult(response); 
+    // 2️⃣ When API returns, update that specific entry
+    setHistory((prev) =>
+      prev.map((item) =>
+        item.id === newEntry.id
+          ? { ...item, result: response, loading: false }
+          : item
+      )
+    );
+
   } catch (err) {
     console.error(err);
   } finally {
@@ -36,7 +52,7 @@ const handleSearch = async ({ text, file }) => {
     <div className="flex flex-col h-screen bg-white">
       <Header />
 
-      <div className="flex-1 overflow-hidden px-4">
+      <div className="flex-1 overflow-y-auto px-4">
         {!hasSearched && !loading && (
           <div className="flex items-center justify-center h-full">
             <h2 className="text-5xl text-gray-600 font-semibold text-center">
@@ -46,11 +62,7 @@ const handleSearch = async ({ text, file }) => {
         )}
 
         {(hasSearched || loading) && (
-          <ResultCard
-            result={result}
-            userInput={userInput}
-            loading={loading}
-          />
+          <ResultCard history={history} loading={loading} />
         )}
       </div>
 
