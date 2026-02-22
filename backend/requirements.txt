@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+python-multipart
+pydantic
+fastapi[all]   
+opencv-python-headless
+easyocr
+sentence-transformers
+numpy
+faiss-cpu
