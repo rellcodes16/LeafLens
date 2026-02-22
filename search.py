@@ -53,11 +53,13 @@ for w in WINDOW_SIZES:
                 offset_votes[book_id].append(offset)
 
 
+# Map book_id -> normalized title
 book_titles = {
     row[0]: normalize_text(row[1])
     for row in c.execute("SELECT book_id, title FROM books")
 }
 
+# Collapse votes by title
 collapsed_votes = defaultdict(list)
 
 for book_id, offsets in offset_votes.items():
@@ -77,11 +79,18 @@ for title_key, offsets in collapsed_votes.items():
     if aligned < 3:
         continue  
 
-    results.append((title_key, aligned, dominance, len(offsets)))
+    # ✅ Find the book_id with the most offsets for this title_key
+    book_ids_for_title = [
+        bid for bid, t_key in book_titles.items() if t_key == title_key
+    ]
+    book_id_votes = {bid: len(offset_votes[bid]) for bid in book_ids_for_title}
+    winning_book_id = max(book_id_votes, key=book_id_votes.get)
+
+    results.append((title_key, aligned, dominance, len(offsets), winning_book_id))
 
 results.sort(key=lambda x: (x[1], x[2], x[3]), reverse=True)
 
-#  OUTPUT 
+# OUTPUT
 if not results:
     print("\n No match found.")
     conn.close()
@@ -92,23 +101,24 @@ for r in results[:5]:
     print(f"- {r[0]} | aligned={r[1]} | dominance={r[2]:.2f} | votes={r[3]}")
 
 best = results[0]
-title_key, aligned, dominance, total = best
+title_key, aligned, dominance, total, winning_book_id = best
+
+row = c.execute(
+    "SELECT title, author FROM books WHERE book_id=?",
+    (winning_book_id,)
+).fetchone()
+
+title, author = row if row else (title_key, "Unknown")
 
 if aligned >= MIN_ALIGNED and dominance >= MIN_DOMINANCE:
-    row = c.execute(
-        "SELECT title, author FROM books WHERE LOWER(title)=?",
-        (title_key,)
-    ).fetchone()
-
-    title, author = row if row else (title_key, "Unknown")
-
     print("\n MATCH FOUND")
-    print(f"Title: {title}")
-    print(f"Author: {author}")
-    print(f"Aligned matches: {aligned}")
-    print(f"Offset dominance: {dominance:.2f}")
-    print(f"Total votes: {total}")
 else:
-    print("\n Low confidence match")
+    print("\n LOW CONFIDENCE MATCH")
+
+print(f"Title: {title}")
+print(f"Author: {author if author and author.strip() else 'Unknown'}")
+print(f"Aligned matches: {aligned}")
+print(f"Offset dominance: {dominance:.2f}")
+print(f"Total votes: {total}")
 
 conn.close()

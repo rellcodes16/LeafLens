@@ -15,6 +15,11 @@ BASE_MIN_DOMINANCE = 0.6
 MIN_TOTAL_VOTES = 12
 
 
+def is_mostly_english(text: str) -> bool:
+    letters = re.findall(r"[a-zA-Z]", text)
+    return len(letters) / max(len(text), 1) > 0.6
+
+
 def normalize_text(text):
     text = text.lower()
     text = re.sub(r"[^a-z0-9\s]", " ", text)
@@ -33,14 +38,25 @@ def fingerprint_query(text, window_size):
 def run_text_search(query: str):
     """
     Perform text-based book identification.
-    
-    Args:
-        query (str): Text from a book page.
-
-    Returns:
-        dict: Result including match status, title, author, and confidence info.
     """
+
+    if not query or not query.strip():
+        return {"status": "fail", "reason": "Empty query"}
+
+    if not is_mostly_english(query):
+        return {
+            "status": "fail",
+            "reason": "Only English books are supported"
+        }
+
     query = normalize_text(query)
+
+    if len(query.split()) < 8:
+        return {
+            "status": "fail",
+            "reason": "Text too short for reliable matching"
+        }
+
     word_count = len(query.split())
 
     MIN_ALIGNED = BASE_MIN_ALIGNED if word_count < 80 else BASE_MIN_ALIGNED + 4
@@ -55,7 +71,7 @@ def run_text_search(query: str):
         for h, q_pos in fingerprint_query(query, w):
             rows = c.execute(
                 "SELECT book_id, position FROM fingerprints WHERE hash=?",
-                (h,)
+                (h,),
             ).fetchall()
 
             for book_id, b_pos in rows:
@@ -69,6 +85,7 @@ def run_text_search(query: str):
     }
 
     collapsed_votes = defaultdict(list)
+
     for book_id, offsets in offset_votes.items():
         title_key = book_titles.get(book_id, book_id)
         collapsed_votes[title_key].extend(offsets)
@@ -86,7 +103,20 @@ def run_text_search(query: str):
         if aligned < 3:
             continue
 
-        results.append((title_key, aligned, dominance, len(offsets)))
+        book_ids_for_title = [
+            bid for bid, t_key in book_titles.items() if t_key == title_key
+        ]
+
+        book_id_votes = {
+            bid: len(offset_votes[bid])
+            for bid in book_ids_for_title
+        }
+
+        winning_book_id = max(book_id_votes, key=book_id_votes.get)
+
+        results.append(
+            (title_key, aligned, dominance, len(offsets), winning_book_id)
+        )
 
     results.sort(key=lambda x: (x[1], x[2], x[3]), reverse=True)
 
@@ -95,29 +125,36 @@ def run_text_search(query: str):
         return {"status": "fail", "reason": "No match found"}
 
     best = results[0]
-    title_key, aligned, dominance, total = best
+    title_key, aligned, dominance, total, winning_book_id = best
+
+    row = c.execute(
+        "SELECT title, author FROM books WHERE book_id=?",
+        (winning_book_id,),
+    ).fetchone()
+
+    title, author = row if row else (title_key, "Unknown")
+
+    response = {
+        "title": title,
+        "author": author if author and author.strip() else "Unknown",
+        "aligned": aligned,
+        "dominance": round(dominance, 2),
+        "votes": total,
+        "top_candidates": [
+            {
+                "title": r[0],
+                "aligned": r[1],
+                "dominance": round(r[2], 2),
+                "votes": r[3],
+            }
+            for r in results[:5]
+        ],
+    }
 
     if aligned >= MIN_ALIGNED and dominance >= MIN_DOMINANCE:
-        row = c.execute(
-            "SELECT title, author FROM books WHERE LOWER(title)=?",
-            (title_key,)
-        ).fetchone()
-
-        title, author = row if row else (title_key, "Unknown")
-
-        conn.close()
-        return {
-            "status": "success",
-            "title": title,
-            "author": author,
-            "aligned": aligned,
-            "dominance": round(dominance, 2),
-            "votes": total,
-            "top_candidates": [
-                {"title": r[0], "aligned": r[1], "dominance": round(r[2], 2), "votes": r[3]}
-                for r in results[:5]
-            ]
-        }
+        response["status"] = "success"
     else:
-        conn.close()
-        return {"status": "fail", "reason": "Low confidence"}
+        response["status"] = "low_confidence"
+
+    conn.close()
+    return response

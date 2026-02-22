@@ -6,6 +6,7 @@ const API = axios.create({
 
 export const searchByText = async (text) => {
   const res = await API.post("/text-search", { text });
+    console.log(res.data)
   return res.data;
 };
 

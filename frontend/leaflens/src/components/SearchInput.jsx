@@ -1,33 +1,33 @@
-import { useRef, useState } from "react";
-import { HiOutlinePhotograph, HiPaperAirplane, HiX } from "react-icons/hi";
+import { useRef, useState } from "react"
+import { HiOutlinePhotograph, HiPaperAirplane, HiX } from "react-icons/hi"
 
 function SearchInput({ onSearch, loading }) {
-  const [text, setText] = useState("");
-  const [file, setFile] = useState(null);
-  const fileInputRef = useRef();
+  const [text, setText] = useState("")
+  const [file, setFile] = useState(null)
+  const fileInputRef = useRef()
 
   const handleSubmit = () => {
-    if (!text && !file) return;
+    if (!text && !file) return
 
-    onSearch({ text, file });
+    onSearch({ text, file })
 
-    setText("");
-    setFile(null);
+    setText("")
+    setFile(null)
   };
 
   const handleFileChange = (e) => {
-    const selectedFile = e.target.files[0];
-    if (!selectedFile) return;
-    setFile(selectedFile);
-    setText(""); 
+    const selectedFile = e.target.files[0]
+    if (!selectedFile) return
+    setFile(selectedFile)
+    setText("")
   };
 
   const removeImage = () => {
-    setFile(null);
-    fileInputRef.current.value = ""; 
+    setFile(null)
+    fileInputRef.current.value = ""
   };
 
-  const hasInput = text.length > 0 || file;
+  const hasInput = text.length > 0 || file
 
   return (
     <div className="w-full border-t border-gray-100 bg-white flex justify-center">
@@ -56,9 +56,7 @@ function SearchInput({ onSearch, loading }) {
           <button
             onClick={() => fileInputRef.current.click()}
             disabled={loading || file} 
-            className={`mr-2 ${
-              file ? "text-gray-300" : "text-gray-500 hover:text-gray-600"
-            }`}
+            className={`mr-2 ${file ? "text-gray-300" : "text-gray-500 hover:text-gray-600"}`}
           >
             <HiOutlinePhotograph className="text-2xl" />
           </button>
@@ -70,11 +68,15 @@ function SearchInput({ onSearch, loading }) {
             accept="image/*"
             onChange={handleFileChange}
           />
+
           <input
             type="text"
             value={text}
             disabled={loading || file} 
             onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleSubmit();
+            }}
             placeholder={
               file
                 ? "Remove image to type..."
@@ -82,6 +84,7 @@ function SearchInput({ onSearch, loading }) {
             }
             className="flex-1 outline-none bg-transparent text-gray-700 disabled:text-gray-400"
           />
+
           {hasInput && (
             <button
               onClick={handleSubmit}
