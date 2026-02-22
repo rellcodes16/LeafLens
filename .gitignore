@@ -11,6 +11,7 @@ book_embeddings.npy
 book_metadata.npy
 books_meta.npy
 books.db
+mpnet_embeddings.npy
 
 # Data
 data/books/
