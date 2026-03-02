@@ -4,8 +4,9 @@ import traceback
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from api.text_search import run_text_search
-from api.image_search import run_image_search
+from backend.app import app
+from backend.api.text_search import run_text_search
+from backend.api.image_search import run_image_search
 import tempfile
 import os
 import imghdr
