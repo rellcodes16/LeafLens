@@ -6,6 +6,6 @@ pydantic==2.5.2
 opencv-python-headless==4.8.1.78
 easyocr==1.6.2
 sentence-transformers==2.2.2
-numpy==1.26.0
+numpy==1.25.2
 faiss-cpu==1.7.4
 werkzeug>=2.1.0
